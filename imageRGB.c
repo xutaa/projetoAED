@@ -283,11 +283,26 @@ void ImageDestroy(Image* imgp) {
 /// (The caller is responsible for destroying the returned image!)
 Image ImageCopy(const Image img) {
   assert(img != NULL);
+  assert(img->height > 0 && img->width > 0);
 
-  // TO BE COMPLETED
-  // ...
+  uint32 new_image_height = img->height;
+  uint32 new_image_width = img->width;
+  
+  Image new_image = ImageCreate(new_image_width,new_image_height);
 
-  return NULL;
+  //new_image->num_colors = img->num_colors;
+
+  for (int i = 0; i < img->num_colors; i++){
+    new_image->LUT[i] = img->LUT[i];
+  }
+
+  for (uint32 h = 0; h < img->height; h++){
+    for (uint32 w = 0; w < img->width; w++){
+      new_image->image[h][w] = img->image[h][w];
+    }    
+  }
+
+  return new_image;
 }
 
 /// Printing on the console
@@ -555,10 +570,18 @@ uint16 ImageColors(const Image img) {
 int ImageIsEqual(const Image img1, const Image img2) {
   assert(img1 != NULL);
   assert(img2 != NULL);
-
-  // TO BE COMPLETED
-  // ...
-
+  
+  if(img1 == img2) return 1;
+  if(img1->height != img2->height) return 0;
+  if(img1->width != img2->width) return 0;
+  
+  for (uint32 h = 0; h < img1->height; h++){
+    for (uint32 w = 0; w < img1->width; w++){
+      rgb_t img1_pixel_color = img1->LUT[img1->image[h][w]];
+      rgb_t img2_pixel_color = img2->LUT[img2->image[h][w]];
+      if(img1_pixel_color == img2_pixel_color) return 1;
+    }
+  }
   return 0;
 }
 
@@ -586,8 +609,18 @@ int ImageIsDifferent(const Image img1, const Image img2) {
 Image ImageRotate90CW(const Image img) {
   assert(img != NULL);
 
-  // TO BE COMPLETED
-  // ...
+  Image new_image = ImageCreate(img->height, img->width);
+  if(new_image == NULL) return NULL;
+
+  for (uint16 lut_index = 0; lut_index < img->num_colors; lut_index++){
+    LUTAllocColor(new_image, img->LUT[lut_index]);
+  }
+
+  for (uint32 h = 0; h < new_image->height; h++){
+    for (uint32 w = 0; w < new_image->width; w++){
+      new_image->image[h][w] = img->image[(img->height - 1) - w][h];
+    }
+  }
 
   return NULL;
 }
@@ -601,8 +634,9 @@ Image ImageRotate90CW(const Image img) {
 Image ImageRotate180CW(const Image img) {
   assert(img != NULL);
 
-  // TO BE COMPLETED
-  // ...
+  Image new_image = ImageCreate(img->width, img->height);
+
+
 
   return NULL;
 }
