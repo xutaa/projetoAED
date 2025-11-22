@@ -23,6 +23,9 @@ imageRGBTest.o: imageRGB.h instrumentation.h error.h \
 cleanobj:
 	rm -f *.o
 
-clean: cleanobj
+cleanimg:
+	rm -f *.ppm *.pbm
+
+clean: cleanobj cleanimg
 	rm -f $(PROGS)
 

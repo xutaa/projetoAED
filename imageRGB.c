@@ -48,12 +48,13 @@
 #define FIXED_LUT_SIZE 1000
 
 // Internal structure for storing RGB images
-struct image {
+struct image
+{
   uint32 width;
   uint32 height;
-  uint16** image;  // pointer to an array of pointers referencing the image rows
-  uint16 num_colors;  // the number of colors (i.e., pixel labels) used
-  rgb_t* LUT;         // table storing (R,G,B) triplets
+  uint16 **image;    // pointer to an array of pointers referencing the image rows
+  uint16 num_colors; // the number of colors (i.e., pixel labels) used
+  rgb_t *LUT;        // table storing (R,G,B) triplets
 };
 
 // Design by Contract
@@ -81,8 +82,10 @@ struct image {
 // See how it's used in ImageLoadPBM, for example.
 
 // Check a condition and if false, print failmsg and exit.
-static void check(int condition, const char* failmsg) {
-  if (!condition) {
+static void check(int condition, const char *failmsg)
+{
+  if (!condition)
+  {
     perror(failmsg);
     exit(errno || 255);
   }
@@ -90,9 +93,10 @@ static void check(int condition, const char* failmsg) {
 
 /// Init Image library.  (Call once!)
 /// Currently, simply calibrate instrumentation and set names of counters.
-void ImageInit(void) {  ///
+void ImageInit(void)
+{ ///
   InstrCalibrate();
-  InstrName[0] = "pixmem";  // InstrCount[0] will count pixel array acesses
+  InstrName[0] = "pixmem"; // InstrCount[0] will count pixel array acesses
   // Name other counters here...
 }
 
@@ -104,7 +108,8 @@ void ImageInit(void) {  ///
 
 /// Auxiliary (static) functions
 
-static Image AllocateImageHeader(uint32 width, uint32 height) {
+static Image AllocateImageHeader(uint32 width, uint32 height)
+{
   // Create the header of an image data structure
   // Allocate the array of pointers to rows
   // And the look-up table
@@ -117,7 +122,7 @@ static Image AllocateImageHeader(uint32 width, uint32 height) {
   newHeader->height = height;
 
   // Allocating the array of pointers to image rows
-  newHeader->image = malloc(height * sizeof(uint16*));
+  newHeader->image = malloc(height * sizeof(uint16 *));
   // Error handling
   check(newHeader->image != NULL, "Alloc failed ->image array");
 
@@ -128,15 +133,16 @@ static Image AllocateImageHeader(uint32 width, uint32 height) {
 
   // Initialize LUT with 2 fixed colors
   newHeader->num_colors = 2;
-  newHeader->LUT[0] = 0xffffff;  // RGB WHITE
-  newHeader->LUT[1] = 0x000000;  // RGB BLACK
+  newHeader->LUT[0] = 0xffffff; // RGB WHITE
+  newHeader->LUT[1] = 0x000000; // RGB BLACK
 
   return newHeader;
 }
 
 // Allocate row of background (label=0) pixels
-static uint16* AllocateRowArray(uint32 size) {
-  uint16* newArray = calloc((size_t)size, sizeof(uint16));
+static uint16 *AllocateRowArray(uint32 size)
+{
+  uint16 *newArray = calloc((size_t)size, sizeof(uint16));
   // Error handling
   check(newArray != NULL, "AllocateRowArray");
 
@@ -145,18 +151,23 @@ static uint16* AllocateRowArray(uint32 size) {
 
 /// Find color label for given RGB color in img LUT.
 /// Return the label or -1 if not found.
-static int LUTFindColor(Image img, rgb_t color) {
-  for (uint16 index = 0; index < img->num_colors; index++) {
-    if (img->LUT[index] == color) return index;
+static int LUTFindColor(Image img, rgb_t color)
+{
+  for (uint16 index = 0; index < img->num_colors; index++)
+  {
+    if (img->LUT[index] == color)
+      return index;
   }
   return -1;
 }
 
 /// Return color label for RGB color in img LUT.
 /// Finds existing color or allocs new one!
-static int LUTAllocColor(Image img, rgb_t color) {
+static int LUTAllocColor(Image img, rgb_t color)
+{
   int index = LUTFindColor(img, color);
-  if (index < 0) {
+  if (index < 0)
+  {
     check(img->num_colors < FIXED_LUT_SIZE, "LUT Overflow");
     index = img->num_colors++;
     img->LUT[index] = color;
@@ -165,7 +176,8 @@ static int LUTAllocColor(Image img, rgb_t color) {
 }
 
 /// Return a pseudo-random successor of the given color.
-static rgb_t GenerateNextColor(rgb_t color) {
+static rgb_t GenerateNextColor(rgb_t color)
+{
   return (color + 7639) & 0xffffff;
 }
 
@@ -177,7 +189,8 @@ static rgb_t GenerateNextColor(rgb_t color) {
 ///
 /// On success, a new image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageCreate(uint32 width, uint32 height) {
+Image ImageCreate(uint32 width, uint32 height)
+{
   assert(width > 0);
   assert(height > 0);
 
@@ -185,8 +198,9 @@ Image ImageCreate(uint32 width, uint32 height) {
   Image img = AllocateImageHeader(width, height);
 
   // Creating the image rows
-  for (uint32 i = 0; i < height; i++) {
-    img->image[i] = AllocateRowArray(width);  // Alloc all WHITE row
+  for (uint32 i = 0; i < height; i++)
+  {
+    img->image[i] = AllocateRowArray(width); // Alloc all WHITE row
   }
 
   return img;
@@ -201,7 +215,8 @@ Image ImageCreate(uint32 width, uint32 height) {
 ///
 /// On success, a new image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageCreateChess(uint32 width, uint32 height, uint32 edge, rgb_t color) {
+Image ImageCreateChess(uint32 width, uint32 height, uint32 edge, rgb_t color)
+{
   assert(width > 0);
   assert(height > 0);
   assert(edge > 0);
@@ -214,9 +229,11 @@ Image ImageCreateChess(uint32 width, uint32 height, uint32 edge, rgb_t color) {
   // Assigning the color to each image pixel
 
   // Pixel (0, 0) gets the chosen color label
-  for (uint32 i = 0; i < height; i++) {
+  for (uint32 i = 0; i < height; i++)
+  {
     uint32 I = i / edge;
-    for (uint32 j = 0; j < width; j++) {
+    for (uint32 j = 0; j < width; j++)
+    {
       uint32 J = j / edge;
       img->image[i][j] = (I + J) % 2 ? 0 : label;
     }
@@ -227,7 +244,8 @@ Image ImageCreateChess(uint32 width, uint32 height, uint32 edge, rgb_t color) {
 }
 
 /// Create an image with a palete of generated colors.
-Image ImageCreatePalete(uint32 width, uint32 height, uint32 edge) {
+Image ImageCreatePalete(uint32 width, uint32 height, uint32 edge)
+{
   assert(width > 0);
   assert(height > 0);
   assert(edge > 0);
@@ -236,7 +254,8 @@ Image ImageCreatePalete(uint32 width, uint32 height, uint32 edge) {
 
   // Fill LUT with generated colors
   rgb_t color = 0x000000;
-  while (img->num_colors < FIXED_LUT_SIZE) {
+  while (img->num_colors < FIXED_LUT_SIZE)
+  {
     color = GenerateNextColor(color);
     img->LUT[img->num_colors++] = color;
   }
@@ -245,9 +264,11 @@ Image ImageCreatePalete(uint32 width, uint32 height, uint32 edge) {
   uint32 wtiles = width / edge;
 
   // Pixel (0, 0) gets the chosen color label
-  for (uint32 i = 0; i < height; i++) {
+  for (uint32 i = 0; i < height; i++)
+  {
     uint32 I = i / edge;
-    for (uint32 j = 0; j < width; j++) {
+    for (uint32 j = 0; j < width; j++)
+    {
       uint32 J = j / edge;
       img->image[i][j] = (I * wtiles + J) % FIXED_LUT_SIZE;
     }
@@ -261,12 +282,14 @@ Image ImageCreatePalete(uint32 width, uint32 height, uint32 edge) {
 /// If (*imgp)==NULL, no operation is performed.
 ///
 /// Ensures: (*imgp)==NULL.
-void ImageDestroy(Image* imgp) {
+void ImageDestroy(Image *imgp)
+{
   assert(imgp != NULL);
 
   Image img = *imgp;
 
-  for (uint32 i = 0; i < img->height; i++) {
+  for (uint32 i = 0; i < img->height; i++)
+  {
     free(img->image[i]);
   }
   free(img->image);
@@ -281,14 +304,18 @@ void ImageDestroy(Image* imgp) {
 ///
 /// On success, a new copied image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageCopy(const Image img) {
+Image ImageCopy(const Image img)
+{
   assert(img != NULL);
 
   Image new_image = ImageCreate(img->width, img->height);
-  if (new_image == NULL) return NULL;
-  
-  for (uint32 h = 0; h < img->height; h++) {
-    for (uint32 w = 0; w < img->width; w++) {
+  if (new_image == NULL)
+    return NULL;
+
+  for (uint32 h = 0; h < img->height; h++)
+  {
+    for (uint32 w = 0; w < img->width; w++)
+    {
       new_image->image[h][w] = img->image[h][w];
     }
   }
@@ -297,7 +324,7 @@ Image ImageCopy(const Image img) {
   {
     LUTAllocColor(new_image, img->LUT[i]);
   }
-  
+
   return new_image;
 }
 
@@ -306,14 +333,17 @@ Image ImageCopy(const Image img) {
 /// These functions do not modify the image and never fail.
 
 /// Output the raw RGB image (i.e., print the integer value of pixel).
-void ImageRAWPrint(const Image img) {
+void ImageRAWPrint(const Image img)
+{
   printf("width = %d height = %d\n", (int)img->width, (int)img->height);
   printf("num_colors = %d\n", (int)img->num_colors);
   printf("RAW image\n");
 
   // Print the pixel labels of each image row
-  for (uint32 i = 0; i < img->height; i++) {
-    for (uint32 j = 0; j < img->width; j++) {
+  for (uint32 i = 0; i < img->height; i++)
+  {
+    for (uint32 j = 0; j < img->width; j++)
+    {
       printf("%2d", img->image[i][j]);
     }
     // At current row end
@@ -322,7 +352,8 @@ void ImageRAWPrint(const Image img) {
 
   printf("LUT:\n");
   // Print the LUT (R,G,B) values
-  for (int i = 0; i < (int)img->num_colors; i++) {
+  for (int i = 0; i < (int)img->num_colors; i++)
+  {
     rgb_t color = img->LUT[i];
     int r = color >> 16 & 0xff;
     int g = color >> 8 & 0xff;
@@ -338,12 +369,15 @@ void ImageRAWPrint(const Image img) {
 // See PBM format specification: http://netpbm.sourceforge.net/doc/pbm.html
 
 //
-static void unpackBits(int nbytes, const uint8 bytes[], uint8 raw_row[]) {
+static void unpackBits(int nbytes, const uint8 bytes[], uint8 raw_row[])
+{
   // bitmask starts at top bit
   int offset = 0;
   uint8 mask = 1 << (7 - offset);
-  while (offset < 8) {  // or (mask > 0)
-    for (int b = 0; b < nbytes; b++) {
+  while (offset < 8)
+  { // or (mask > 0)
+    for (int b = 0; b < nbytes; b++)
+    {
       raw_row[8 * b + offset] = (bytes[b] & mask) != 0;
     }
     mask >>= 1;
@@ -351,13 +385,17 @@ static void unpackBits(int nbytes, const uint8 bytes[], uint8 raw_row[]) {
   }
 }
 
-static void packBits(int nbytes, uint8 bytes[], const uint8 raw_row[]) {
+static void packBits(int nbytes, uint8 bytes[], const uint8 raw_row[])
+{
   // bitmask starts at top bit
   int offset = 0;
   uint8 mask = 1 << (7 - offset);
-  while (offset < 8) {  // or (mask > 0)
-    for (int b = 0; b < nbytes; b++) {
-      if (offset == 0) bytes[b] = 0;
+  while (offset < 8)
+  { // or (mask > 0)
+    for (int b = 0; b < nbytes; b++)
+    {
+      if (offset == 0)
+        bytes[b] = 0;
       bytes[b] |= raw_row[8 * b + offset] ? mask : 0;
     }
     mask >>= 1;
@@ -368,10 +406,12 @@ static void packBits(int nbytes, uint8 bytes[], const uint8 raw_row[]) {
 // Match and skip 0 or more comment lines in file f.
 // Comments start with a # and continue until the end-of-line, inclusive.
 // Returns the number of comments skipped.
-static int skipComments(FILE* f) {
+static int skipComments(FILE *f)
+{
   char c;
   int i = 0;
-  while (fscanf(f, "#%*[^\n]%c", &c) == 1 && c == '\n') {
+  while (fscanf(f, "#%*[^\n]%c", &c) == 1 && c == '\n')
+  {
     i++;
   }
   return i;
@@ -381,10 +421,11 @@ static int skipComments(FILE* f) {
 /// Only binary PBM files are accepted.
 /// On success, a new image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageLoadPBM(const char* filename) {  ///
+Image ImageLoadPBM(const char *filename)
+{ ///
   int w, h;
   char c;
-  FILE* f = NULL;
+  FILE *f = NULL;
   Image img = NULL;
 
   check((f = fopen(filename, "rb")) != NULL, "Open failed");
@@ -400,15 +441,17 @@ Image ImageLoadPBM(const char* filename) {  ///
   img = AllocateImageHeader((uint32)w, (uint32)h);
 
   // Read pixels
-  int nbytes = (w + 8 - 1) / 8;  // number of bytes for each row
+  int nbytes = (w + 8 - 1) / 8; // number of bytes for each row
   // using VLAs...
   uint8 bytes[nbytes];
   uint8 raw_row[nbytes * 8];
-  for (uint32 i = 0; i < img->height; i++) {
+  for (uint32 i = 0; i < img->height; i++)
+  {
     check(fread(bytes, sizeof(uint8), nbytes, f) == (size_t)nbytes, "Reading pixels");
     unpackBits(nbytes, bytes, raw_row);
     img->image[i] = AllocateRowArray((uint32)w);
-    for (uint32 j = 0; j < (uint32)w; j++) {
+    for (uint32 j = 0; j < (uint32)w; j++)
+    {
       img->image[i][j] = (uint16)raw_row[j];
     }
   }
@@ -420,24 +463,27 @@ Image ImageLoadPBM(const char* filename) {  ///
 /// Save image to PBM file.
 /// On success, returns nonzero.
 /// On failure, a partial and invalid file may be left in the system.
-int ImageSavePBM(const Image img, const char* filename) {  ///
+int ImageSavePBM(const Image img, const char *filename)
+{ ///
   assert(img != NULL);
   assert(img->num_colors == 2);
 
   int w = (int)img->width;
   int h = (int)img->height;
-  FILE* f = NULL;
+  FILE *f = NULL;
 
   check((f = fopen(filename, "wb")) != NULL, "Open failed");
   check(fprintf(f, "P4\n%d %d\n", w, h) > 0, "Writing header failed");
 
   // Write pixels
-  int nbytes = (w + 8 - 1) / 8;  // number of bytes for each row
+  int nbytes = (w + 8 - 1) / 8; // number of bytes for each row
   // using VLAs...
   uint8 bytes[nbytes];
   uint8 raw_row[nbytes * 8];
-  for (uint32 i = 0; i < img->height; i++) {
-    for (uint32 j = 0; j < img->width; j++) {
+  for (uint32 i = 0; i < img->height; i++)
+  {
+    for (uint32 j = 0; j < img->width; j++)
+    {
       raw_row[j] = (uint8)img->image[i][j];
     }
     // Fill padding pixels with WHITE
@@ -449,7 +495,7 @@ int ImageSavePBM(const Image img, const char* filename) {  ///
   // Cleanup
   fclose(f);
 
-  return 0;
+  return 1;
 }
 
 /// PPM file operations --- For RGB images
@@ -458,12 +504,13 @@ int ImageSavePBM(const Image img, const char* filename) {  ///
 /// Only ASCII PPM files are accepted.
 /// On success, a new image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageLoadPPM(const char* filename) {
+Image ImageLoadPPM(const char *filename)
+{
   assert(filename != NULL);
   int w, h;
   int levels;
   char c;
-  FILE* f = NULL;
+  FILE *f = NULL;
 
   check((f = fopen(filename, "rb")) != NULL, "Open failed");
   // Parse PPM header
@@ -473,16 +520,17 @@ Image ImageLoadPPM(const char* filename) {
   skipComments(f);
   check(fscanf(f, "%d", &h) == 1 && h >= 0, "Invalid height");
   skipComments(f);
-  check(fscanf(f, "%d", &levels) == 1 && 0 <= levels && levels <= 255,
-        "Invalid depth");
+  check(fscanf(f, "%d", &levels) == 1 && 0 <= levels && levels <= 255, "Invalid depth");
   check(fscanf(f, "%c", &c) == 1 && isspace(c), "Whitespace expected");
 
   // Allocate image
   Image img = ImageCreate((uint32)w, (uint32)h);
 
   // Read pixels
-  for (uint32 i = 0; i < img->height; i++) {
-    for (uint32 j = 0; j < img->width; j++) {
+  for (uint32 i = 0; i < img->height; i++)
+  {
+    for (uint32 j = 0; j < img->width; j++)
+    {
       int r, g, b;
       check(fscanf(f, "%d %d %d", &r, &g, &b) == 3 && 0 <= r && r <= levels &&
                 0 <= g && g <= levels && 0 <= b && b <= levels,
@@ -503,19 +551,22 @@ Image ImageLoadPPM(const char* filename) {
 /// Save image to PPM file.
 /// On success, returns nonzero.
 /// On failure, a partial and invalid file may be left in the system.
-int ImageSavePPM(const Image img, const char* filename) {
+int ImageSavePPM(const Image img, const char *filename)
+{
   assert(img != NULL);
 
   int w = (int)img->width;
   int h = (int)img->height;
-  FILE* f = NULL;
+  FILE *f = NULL;
 
   check((f = fopen(filename, "wb")) != NULL, "Open failed");
   check(fprintf(f, "P3\n%d %d\n255\n", w, h) > 0, "Writing header failed");
 
   // The pixel RGB values
-  for (uint32 i = 0; i < img->height; i++) {
-    for (uint32 j = 0; j < img->width; j++) {
+  for (uint32 i = 0; i < img->height; i++)
+  {
+    for (uint32 j = 0; j < img->width; j++)
+    {
       uint16 index = img->image[i][j];
       rgb_t color = img->LUT[index];
       int r = color >> 16 & 0xff;
@@ -529,7 +580,7 @@ int ImageSavePPM(const Image img, const char* filename) {
   // Cleanup
   fclose(f);
 
-  return 0;
+  return 1;
 }
 
 /// Information queries
@@ -537,19 +588,22 @@ int ImageSavePPM(const Image img, const char* filename) {
 /// These functions do not modify the image and never fail.
 
 /// Get image width
-uint32 ImageWidth(const Image img) {
+uint32 ImageWidth(const Image img)
+{
   assert(img != NULL);
   return img->width;
 }
 
 /// Get image height
-uint32 ImageHeight(const Image img) {
+uint32 ImageHeight(const Image img)
+{
   assert(img != NULL);
   return img->height;
 }
 
 /// Get number of image colors
-uint16 ImageColors(const Image img) {
+uint16 ImageColors(const Image img)
+{
   assert(img != NULL);
   return img->num_colors;
 }
@@ -561,25 +615,33 @@ uint16 ImageColors(const Image img) {
 /// Check if img1 and img2 represent equal images.
 /// NOTE: The same rgb color may correspond to different LUT labels in
 /// different images!
-int ImageIsEqual(const Image img1, const Image img2) {
+int ImageIsEqual(const Image img1, const Image img2)
+{
   assert(img1 != NULL);
   assert(img2 != NULL);
-  
-  if (img1 == img2) return 1;
-  if (img1->height != img2->height) return 0;
-  if (img1->width != img2->width) return 0;
-  
-  for (uint32 h = 0; h < img1->height; h++) {
-    for (uint32 w = 0; w < img1->width; w++) {
+
+  if (img1 == img2)
+    return 1;
+  if (img1->height != img2->height)
+    return 0;
+  if (img1->width != img2->width)
+    return 0;
+
+  for (uint32 h = 0; h < img1->height; h++)
+  {
+    for (uint32 w = 0; w < img1->width; w++)
+    {
       rgb_t img1_pixel_color = img1->LUT[img1->image[h][w]];
       rgb_t img2_pixel_color = img2->LUT[img2->image[h][w]];
-      if (img1_pixel_color != img2_pixel_color) return 0;
+      if (img1_pixel_color != img2_pixel_color)
+        return 0;
     }
   }
   return 1;
 }
 
-int ImageIsDifferent(const Image img1, const Image img2) {
+int ImageIsDifferent(const Image img1, const Image img2)
+{
   assert(img1 != NULL);
   assert(img2 != NULL);
 
@@ -600,19 +662,24 @@ int ImageIsDifferent(const Image img1, const Image img2) {
 ///
 /// On success, a new image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageRotate90CW(const Image img) {
+Image ImageRotate90CW(const Image img)
+{
   assert(img != NULL);
 
   Image new_image = ImageCreate(img->height, img->width);
-  if (new_image == NULL) return NULL;
+  if (new_image == NULL)
+    return NULL;
 
-  for (uint16 lut_index = 0; lut_index < img->num_colors; lut_index++) {
+  for (uint16 lut_index = 0; lut_index < img->num_colors; lut_index++)
+  {
     LUTAllocColor(new_image, img->LUT[lut_index]);
   }
 
-  for (uint32 h = 0; h < new_image->height; h++) {
-    for (uint32 w = 0; w < new_image->width; w++) {
-      new_image->image[h][w] = img->image[(img->height-1)-w][h];
+  for (uint32 h = 0; h < new_image->height; h++)
+  {
+    for (uint32 w = 0; w < new_image->width; w++)
+    {
+      new_image->image[h][w] = img->image[(img->height - 1) - w][h];
     }
   }
 
@@ -625,19 +692,24 @@ Image ImageRotate90CW(const Image img) {
 ///
 /// On success, a new image is returned.
 /// (The caller is responsible for destroying the returned image!)
-Image ImageRotate180CW(const Image img) {
+Image ImageRotate180CW(const Image img)
+{
   assert(img != NULL);
 
   Image new_image = ImageCreate(img->width, img->height);
-  if (new_image == NULL) return NULL;
+  if (new_image == NULL)
+    return NULL;
 
-  for (uint16 lut_index = 0; lut_index < img->num_colors; lut_index++) {
+  for (uint16 lut_index = 0; lut_index < img->num_colors; lut_index++)
+  {
     LUTAllocColor(new_image, img->LUT[lut_index]);
   }
-  
-  for (uint32 h = 0; h < new_image->height; h++) {
-    for (uint32 w = 0; w < new_image->width; w++) {
-      new_image->image[h][w] = img->image[(img->height-1)-h][(img->width-1)-w];
+
+  for (uint32 h = 0; h < new_image->height; h++)
+  {
+    for (uint32 w = 0; w < new_image->width; w++)
+    {
+      new_image->image[h][w] = img->image[(img->height - 1) - h][(img->width - 1) - w];
     }
   }
 
@@ -648,7 +720,8 @@ Image ImageRotate180CW(const Image img) {
 /// ATTENTION
 ///   u : column index
 ///   v : row index
-int ImageIsValidPixel(const Image img, int u, int v) {
+int ImageIsValidPixel(const Image img, int u, int v)
+{
   return 0 <= u && u < (int)img->width && 0 <= v && v < (int)img->height;
 }
 
@@ -668,42 +741,108 @@ int ImageIsValidPixel(const Image img, int u, int v) {
 
 /// Each function carries out a different version of the algorithm.
 
+static int _imageRegionFillingRecursive(Image img, int u, int v, uint16 label, uint16 original_label)
+{
+  if (!ImageIsValidPixel(img, u, v) || img->image[u][v] == label || img->image[u][v] != original_label)
+    return 0;
+  img->image[u][v] = label;
+  int output = 1;
+  output += _imageRegionFillingRecursive(img, u - 1, v, label, original_label);
+  output += _imageRegionFillingRecursive(img, u, v - 1, label, original_label);
+  output += _imageRegionFillingRecursive(img, u + 1, v, label, original_label);
+  output += _imageRegionFillingRecursive(img, u, v + 1, label, original_label);
+  return output;
+}
+
 /// Region growing using the recursive flood-filling algorithm.
-int ImageRegionFillingRecursive(Image img, int u, int v, uint16 label) {
+int ImageRegionFillingRecursive(Image img, int u, int v, uint16 label)
+{
   assert(img != NULL);
   assert(ImageIsValidPixel(img, u, v));
-  assert(label < FIXED_LUT_SIZE);
+  assert(label < img->num_colors);
+  if (img->image[u][v] == label)
+    return 0;
+  return _imageRegionFillingRecursive(img, u, v, label, img->image[u][v]);
+}
 
-  // TO BE COMPLETED
-  // ...
-
-  return 0;
+static int _imageRegionFillingWithSTACK(Image img, uint16 label, uint16 original_label, Stack *stack)
+{
+  PixelCoords coords = StackPop(stack);
+  if (!ImageIsValidPixel(img, coords.u, coords.v) || img->image[coords.u][coords.v] == label || img->image[coords.u][coords.v] != original_label)
+    return 0;
+  img->image[coords.u][coords.v] = label;
+  StackPush(stack, PixelCoordsCreate(coords.u - 1, coords.v));
+  StackPush(stack, PixelCoordsCreate(coords.u, coords.v - 1));
+  StackPush(stack, PixelCoordsCreate(coords.u + 1, coords.v));
+  StackPush(stack, PixelCoordsCreate(coords.u, coords.v + 1));
+  return 1;
 }
 
 /// Region growing using a STACK of pixel coordinates to
 /// implement the flood-filling algorithm.
-int ImageRegionFillingWithSTACK(Image img, int u, int v, uint16 label) {
+int ImageRegionFillingWithSTACK(Image img, int u, int v, uint16 label)
+{
   assert(img != NULL);
   assert(ImageIsValidPixel(img, u, v));
   assert(label < FIXED_LUT_SIZE);
 
-  // TO BE COMPLETED
-  // ...
+  if (img->image[u][v] == label)
+    return 0;
 
-  return 0;
+  Stack *stack = StackCreate(u * v);
+  assert(stack != NULL);
+
+  uint16 original_label = img->image[u][v];
+  PixelCoords coords = PixelCoordsCreate(u, v);
+  StackPush(stack, coords);
+  int count = 0;
+  while (!StackIsEmpty(stack))
+  {
+    count += _imageRegionFillingWithSTACK(img, label, original_label, stack);
+  }
+  int size = StackSize(stack);
+  printf("size = %d\n", size);
+  StackDestroy(&stack);
+  return count;
+}
+
+static int _imageRegionFillingWithQUEUE(Image img, uint16 label, uint16 original_label, Queue *queue)
+{
+  PixelCoords coords = QueueDequeue(queue);
+  if (!ImageIsValidPixel(img, coords.u, coords.v) || img->image[coords.u][coords.v] == label || img->image[coords.u][coords.v] != original_label)
+    return 0;
+  img->image[coords.u][coords.v] = label;
+  QueueEnqueue(queue, PixelCoordsCreate(coords.u - 1, coords.v));
+  QueueEnqueue(queue, PixelCoordsCreate(coords.u, coords.v - 1));
+  QueueEnqueue(queue, PixelCoordsCreate(coords.u + 1, coords.v));
+  QueueEnqueue(queue, PixelCoordsCreate(coords.u, coords.v + 1));
+  return 1;
 }
 
 /// Region growing using a QUEUE of pixel coordinates to
 /// implement the flood-filling algorithm.
-int ImageRegionFillingWithQUEUE(Image img, int u, int v, uint16 label) {
+int ImageRegionFillingWithQUEUE(Image img, int u, int v, uint16 label)
+{
   assert(img != NULL);
   assert(ImageIsValidPixel(img, u, v));
   assert(label < FIXED_LUT_SIZE);
 
-  // TO BE COMPLETED
-  // ...
+  if (img->image[u][v] == label)
+    return 0;
 
-  return 0;
+  Queue *queue = QueueCreate(u * v);
+  assert(queue != NULL);
+
+  uint16 original_label = img->image[u][v];
+  PixelCoords coords = PixelCoordsCreate(u, v);
+  QueueEnqueue(queue, coords);
+  int count = 0;
+  while (!QueueIsEmpty(queue))
+  {
+    count += _imageRegionFillingWithQUEUE(img, label, original_label, queue);
+  }
+
+  return count;
 }
 
 /// Image Segmentation
@@ -716,7 +855,8 @@ int ImageRegionFillingWithQUEUE(Image img, int u, int v, uint16 label) {
 /// last argument, using a function pointer.
 ///
 /// Returns the number of image regions found.
-int ImageSegmentation(Image img, FillingFunction fillFunct) {
+int ImageSegmentation(Image img, FillingFunction fillFunct)
+{
   assert(img != NULL);
   assert(fillFunct != NULL);
 
