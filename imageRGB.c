@@ -178,7 +178,7 @@ static int LUTAllocColor(Image img, rgb_t color)
 /// Return a pseudo-random successor of the given color.
 static rgb_t GenerateNextColor(rgb_t color)
 {
-  return (color + 7639) & 0xffffff;
+  return (color + 0xfefdfc) & 0xffffff;
 }
 
 /// Image management functions
@@ -722,7 +722,7 @@ Image ImageRotate180CW(const Image img)
 ///   v : row index
 int ImageIsValidPixel(const Image img, int u, int v)
 {
-  return 0 <= u && u < (int)img->width && 0 <= v && v < (int)img->height;
+  return 0 <= u && u < (int)img->height && 0 <= v && v < (int)img->width;
 }
 
 /// Region Growing
@@ -760,15 +760,18 @@ int ImageRegionFillingRecursive(Image img, int u, int v, uint16 label)
   assert(img != NULL);
   assert(ImageIsValidPixel(img, u, v));
   assert(label < img->num_colors);
-  if (img->image[u][v] == label)
-    return 0;
   return _imageRegionFillingRecursive(img, u, v, label, img->image[u][v]);
+}
+
+static int canPaint(Image img, PixelCoords coords, uint16 label, uint16 original_label)
+{
+  return ImageIsValidPixel(img, coords.u, coords.v) && img->image[coords.u][coords.v] != label && img->image[coords.u][coords.v] == original_label;
 }
 
 static int _imageRegionFillingWithSTACK(Image img, uint16 label, uint16 original_label, Stack *stack)
 {
   PixelCoords coords = StackPop(stack);
-  if (!ImageIsValidPixel(img, coords.u, coords.v) || img->image[coords.u][coords.v] == label || img->image[coords.u][coords.v] != original_label)
+  if (!canPaint(img, coords, label, original_label))
     return 0;
   img->image[coords.u][coords.v] = label;
   StackPush(stack, PixelCoordsCreate(coords.u - 1, coords.v));
@@ -789,21 +792,20 @@ int ImageRegionFillingWithSTACK(Image img, int u, int v, uint16 label)
   if (img->image[u][v] == label)
     return 0;
 
-  Stack *stack = StackCreate(u * v);
+  Stack *stack = StackCreate(img->height * img->width / 4 * 3);
   assert(stack != NULL);
 
+  StackPush(stack, PixelCoordsCreate(u, v));
+
+  int paintedPixels = 0;
   uint16 original_label = img->image[u][v];
-  PixelCoords coords = PixelCoordsCreate(u, v);
-  StackPush(stack, coords);
-  int count = 0;
+
   while (!StackIsEmpty(stack))
   {
-    count += _imageRegionFillingWithSTACK(img, label, original_label, stack);
+    paintedPixels += _imageRegionFillingWithSTACK(img, label, original_label, stack);
   }
-  int size = StackSize(stack);
-  printf("size = %d\n", size);
   StackDestroy(&stack);
-  return count;
+  return paintedPixels;
 }
 
 static int _imageRegionFillingWithQUEUE(Image img, uint16 label, uint16 original_label, Queue *queue)
@@ -830,7 +832,7 @@ int ImageRegionFillingWithQUEUE(Image img, int u, int v, uint16 label)
   if (img->image[u][v] == label)
     return 0;
 
-  Queue *queue = QueueCreate(u * v);
+  Queue *queue = QueueCreate(img->height * img->width / 4 * 3);
   assert(queue != NULL);
 
   uint16 original_label = img->image[u][v];
@@ -841,7 +843,7 @@ int ImageRegionFillingWithQUEUE(Image img, int u, int v, uint16 label)
   {
     count += _imageRegionFillingWithQUEUE(img, label, original_label, queue);
   }
-
+  QueueDestroy(&queue);
   return count;
 }
 
@@ -860,8 +862,21 @@ int ImageSegmentation(Image img, FillingFunction fillFunct)
   assert(img != NULL);
   assert(fillFunct != NULL);
 
-  // TO BE COMPLETED
-  // ...
-
-  return 0;
+  int regions = 0;
+  rgb_t color = 0x000000;
+  int label;
+  for (uint16 u = 0; u < img->height; u++)
+  {
+    for (uint16 v = 0; v < img->width; v++)
+    {
+      if (img->image[u][v] == 0)
+      {
+        regions++;
+        color = GenerateNextColor(color);
+        label = LUTAllocColor(img, color);
+        fillFunct(img, u, v, label);
+      }
+    }
+  }
+  return regions;
 }

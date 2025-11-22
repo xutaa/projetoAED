@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 	// ImageRAWPrint(white_image);
 
 	printf("2) ImageCreateChess(black) + ImageSavePBM\n");
-	Image image_chess_1 = ImageCreateChess(150, 120, 30, 0x000000);	// black
+	Image image_chess_1 = ImageCreateChess(150, 120, 10, 0x000000);	// black
 	check(image_chess_1 != NULL, "2) ERROR");
 	// ImageRAWPrint(image_chess_1);
 	ImageSavePBM(image_chess_1, "chess_image_1.pbm");
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 	// ImageRAWPrint(image_2);
 
 	printf("8) ImageCreatePalete\n");
-	Image image_3 = ImageCreatePalete(4 * 32, 4 * 32, 4);
+	Image image_3 = ImageCreatePalete(4 * 32, 4 * 32, 8);
 	check(image_3 != NULL, "8) ERROR");
 	ImageSavePPM(image_3, "palete.ppm");
 
@@ -131,6 +131,12 @@ int main(int argc, char* argv[]) {
 	printf("%d pixels\n", amount);
 	ImageSavePPM(queue, "chess_red_image_region_fill_queue.ppm");
 
+	printf("16) ImageSegmentation (chess_black)\n");
+	Image segmentation = ImageCopy(image_chess_1);
+	int regions = ImageSegmentation(segmentation, &ImageRegionFillingWithSTACK);
+	printf("%d regions\n", regions);
+	ImageSavePPM(segmentation, "chess_black_image_segmentation.ppm");
+
 	printf("101) Test ImageIsEqual\n");
 	check(ImageIsEqual(image_chess_1, copy_image_1), "101.1) image_chess_1, copy_image_1 are not equal");
 	check(ImageIsEqual(image_chess_2, copy_image_2), "101.2) image_chess_2, copy_image_2 are not equal");
@@ -159,6 +165,7 @@ int main(int argc, char* argv[]) {
 	ImageDestroy(&recursive);
 	ImageDestroy(&stack);
 	ImageDestroy(&queue);
+	ImageDestroy(&segmentation);
 
 
 	return 0;
