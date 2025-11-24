@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 	// ImageRAWPrint(image_2);
 
 	printf("8) ImageCreatePalete\n");
-	Image image_3 = ImageCreatePalete(4 * 32, 4 * 32, 8);
+	Image image_3 = ImageCreatePalete(2 * 32, 4 * 32, 4);
 	check(image_3 != NULL, "8) ERROR");
 	ImageSavePPM(image_3, "palete.ppm");
 
@@ -156,6 +156,7 @@ int main(int argc, char* argv[]) {
 	}
 	ImageDestroy(&image_chess_1);
 	ImageDestroy(&image_chess_2);
+	ImageDestroy(&load_palete);
 	ImageDestroy(&image_1);
 	ImageDestroy(&image_2);
 	ImageDestroy(&image_3);
