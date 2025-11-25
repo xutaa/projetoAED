@@ -47,6 +47,8 @@
 // FIXED SIZE of LUT for storing RGB triplets
 #define FIXED_LUT_SIZE 1000
 
+#define BACKGROUND WHITE
+
 // Internal structure for storing RGB images
 struct image
 {
@@ -96,12 +98,14 @@ static void check(int condition, const char *failmsg)
 void ImageInit(void)
 { ///
   InstrCalibrate();
-  InstrName[0] = "pixmem"; // InstrCount[0] will count pixel array acesses
+  InstrName[0] = "pixmem";         // InstrCount[0] will count pixel array acesses
+  InstrName[1] = "pixvalidations"; // InstrCount[0] will count pixel array acesses
   // Name other counters here...
 }
 
 // Macros to simplify accessing instrumentation counters:
 #define PIXMEM InstrCount[0]
+#define PIXVALIDATIONS InstrCount[1]
 // Add more macros here...
 
 // TIP: Search for PIXMEM or InstrCount to see where it is incremented!
@@ -741,16 +745,35 @@ int ImageIsValidPixel(const Image img, int u, int v)
 
 /// Each function carries out a different version of the algorithm.
 
-static int _imageRegionFillingRecursive(Image img, int u, int v, uint16 label, uint16 original_label)
+static int canPaint(Image img, int columnIndex, int rowIndex, uint16 label)
 {
-  if (!ImageIsValidPixel(img, u, v) || img->image[v][u] == label || img->image[v][u] != original_label)
+  PIXVALIDATIONS++;
+  if (!ImageIsValidPixel(img, columnIndex, rowIndex)) 
+    return 0;
+  PIXVALIDATIONS++;
+  if (img->image[rowIndex][columnIndex] == label)
+    return 0;
+  PIXVALIDATIONS++;
+  if (img->image[rowIndex][columnIndex] != BACKGROUND)
+    return 0;
+  return 1;
+}
+
+static int canPaintC(Image img, PixelCoords coords, uint16 label)
+{
+  return canPaint(img, coords.u, coords.v, label);
+}
+
+static int _imageRegionFillingRecursive(Image img, int u, int v, uint16 label)
+{
+  if (!canPaint(img, u, v, label))
     return 0;
   img->image[v][u] = label;
   int output = 1;
-  output += _imageRegionFillingRecursive(img, u - 1, v, label, original_label);
-  output += _imageRegionFillingRecursive(img, u, v - 1, label, original_label);
-  output += _imageRegionFillingRecursive(img, u + 1, v, label, original_label);
-  output += _imageRegionFillingRecursive(img, u, v + 1, label, original_label);
+  output += _imageRegionFillingRecursive(img, u - 1, v, label);
+  output += _imageRegionFillingRecursive(img, u, v - 1, label);
+  output += _imageRegionFillingRecursive(img, u + 1, v, label);
+  output += _imageRegionFillingRecursive(img, u, v + 1, label);
   return output;
 }
 
@@ -760,18 +783,13 @@ int ImageRegionFillingRecursive(Image img, int columnIndex, int rowIndex, uint16
   assert(img != NULL);
   assert(ImageIsValidPixel(img, columnIndex, rowIndex));
   assert(label < img->num_colors);
-  return _imageRegionFillingRecursive(img, columnIndex, rowIndex, label, img->image[rowIndex][columnIndex]);
+  return _imageRegionFillingRecursive(img, columnIndex, rowIndex, label);
 }
 
-static int canPaint(Image img, PixelCoords coords, uint16 label, uint16 original_label)
-{
-  return ImageIsValidPixel(img, coords.u, coords.v) && img->image[coords.v][coords.u] != label && img->image[coords.v][coords.u] == original_label;
-}
-
-static int _imageRegionFillingWithSTACK(Image img, uint16 label, uint16 original_label, Stack *stack)
+static int _imageRegionFillingWithSTACK(Image img, uint16 label, Stack *stack)
 {
   PixelCoords coords = StackPop(stack);
-  if (!canPaint(img, coords, label, original_label))
+  if (!canPaintC(img, coords, label))
     return 0;
   img->image[coords.v][coords.u] = label;
   StackPush(stack, PixelCoordsCreate(coords.u - 1, coords.v));
@@ -789,6 +807,7 @@ int ImageRegionFillingWithSTACK(Image img, int u, int v, uint16 label)
   assert(ImageIsValidPixel(img, u, v));
   assert(label < FIXED_LUT_SIZE);
 
+  PIXVALIDATIONS++;
   if (img->image[v][u] == label)
     return 0;
 
@@ -798,20 +817,19 @@ int ImageRegionFillingWithSTACK(Image img, int u, int v, uint16 label)
   StackPush(stack, PixelCoordsCreate(u, v));
 
   int paintedPixels = 0;
-  uint16 original_label = img->image[v][u];
 
   while (!StackIsEmpty(stack))
   {
-    paintedPixels += _imageRegionFillingWithSTACK(img, label, original_label, stack);
+    paintedPixels += _imageRegionFillingWithSTACK(img, label, stack);
   }
   StackDestroy(&stack);
   return paintedPixels;
 }
 
-static int _imageRegionFillingWithQUEUE(Image img, uint16 label, uint16 original_label, Queue *queue)
+static int _imageRegionFillingWithQUEUE(Image img, uint16 label, Queue *queue)
 {
   PixelCoords coords = QueueDequeue(queue);
-  if (!canPaint(img, coords, label, original_label))
+  if (!canPaintC(img, coords, label))
     return 0;
   img->image[coords.v][coords.u] = label;
   QueueEnqueue(queue, PixelCoordsCreate(coords.u - 1, coords.v));
@@ -829,19 +847,19 @@ int ImageRegionFillingWithQUEUE(Image img, int u, int v, uint16 label)
   assert(ImageIsValidPixel(img, u, v));
   assert(label < FIXED_LUT_SIZE);
 
+  PIXVALIDATIONS++;
   if (img->image[v][u] == label)
     return 0;
 
   Queue *queue = QueueCreate(img->height * img->width / 4 * 3);
   assert(queue != NULL);
 
-  uint16 original_label = img->image[v][u];
   PixelCoords coords = PixelCoordsCreate(u, v);
   QueueEnqueue(queue, coords);
   int count = 0;
   while (!QueueIsEmpty(queue))
   {
-    count += _imageRegionFillingWithQUEUE(img, label, original_label, queue);
+    count += _imageRegionFillingWithQUEUE(img, label, queue);
   }
   QueueDestroy(&queue);
   return count;
@@ -862,26 +880,22 @@ int ImageSegmentation(Image img, FillingFunction fillFunct)
   assert(img != NULL);
   assert(fillFunct != NULL);
 
-  Image image = ImageCopy(img);
-
   int regions = 0;
-  rgb_t color;
+  rgb_t color = GenerateNextColor(0);
   int label;
-  for (uint16 rowIndex = 0; rowIndex < image->width; rowIndex++)
+  for (uint16 rowIndex = 0; rowIndex < img->width; rowIndex++)
   {
-    for (uint16 columnIndex = 0; columnIndex < image->height; columnIndex++)
+    for (uint16 columnIndex = 0; columnIndex < img->height; columnIndex++)
     {
-      if (image->image[rowIndex][columnIndex] == 0)
+      if (img->image[rowIndex][columnIndex] == 0)
       {
         regions++;
         color = GenerateNextColor(color);
-        label = LUTAllocColor(image, color);
-        fillFunct(image, columnIndex, rowIndex, label);
+        label = LUTAllocColor(img, color);
+        fillFunct(img, columnIndex, rowIndex, label);
       }
     }
   }
-
-  ImageDestroy(&image);
 
   return regions;
 }

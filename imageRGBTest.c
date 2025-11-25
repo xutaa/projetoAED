@@ -1,7 +1,10 @@
-// imageRGBTest - A program that performs a comprehensive set of operations on RGB images,
-//                serving as a robust test suite for the imageRGB module.
+// imageRGBTest - A program that performs some operations on RGB images.
 //
-// Este código foi modificado para incluir contadores de testes e formatação de cor (ANSI).
+// This program is an example use of the imageRGB module,
+// a programming project for the course AED, DETI / UA.PT
+//
+// You may freely use and modify this code, NO WARRANTY, blah blah,
+// as long as you give proper credit to the original and subsequent authors.
 //
 // The AED Team <jmadeira@ua.pt, jmr@ua.pt, ...>
 // 2025
@@ -43,14 +46,6 @@ int global_total_count = 0;
         } \
     } while (0)
 
-// Função auxiliar para verificar condições (mantida, mas o ASSERT_CHECK é preferencial para testes)
-static void check(int condition, const char* failmsg) {
-    if (!condition) {
-        // Usar fprintf(stderr, ...) é mais robusto para mensagens de erro
-        fprintf(stderr, "Check Failed: %s\n", failmsg);
-    }
-}
-
 // Protótipos para organização do código de teste
 static void TestImageCreationAndManagement(int section_num);
 static void TestImageFileIO(int section_num);
@@ -82,8 +77,6 @@ int main(int argc, char* argv[]) {
     printf(ANSI_COLOR_YELLOW "(%d/%d) %d out of %d tests passed.\n" ANSI_COLOR_RESET,
            global_passed_count, global_total_count, global_passed_count, global_total_count);
            
-    printf("Instrumentation Count (Pixel Memory Accesses): %llu\n", InstrCount[0]);
-    
     return 0;
 }
 
@@ -125,6 +118,7 @@ static void TestImageCreationAndManagement(int section_num) {
     int check1_4 = (copy_chess_black != NULL && ImageIsEqual(image_chess_black, copy_chess_black));
     ASSERT_CHECK(check1_4, "ImageCopy_Black", &local_passed_count, &local_total_count);
     
+    // 1.5 - ImageCopy (Deep copy)
     printf("1.5: ImageCopy (chess_red)\n");
     copy_chess_red = ImageCopy(image_chess_red);
     int check1_5 = (copy_chess_red != NULL && ImageIsEqual(image_chess_red, copy_chess_red));
@@ -324,7 +318,7 @@ static void TestImageRegionFillingAndSegmentation(int section_num) {
     // 5.1 - ImageRegionFillingRecursive
     printf("5.1: ImageRegionFillingRecursive\n");
     Image img_rec = ImageCopy(img_base);
-    int count_rec = ImageRegionFillingRecursive(img_rec, 10, 10, WHITE); // Região 8x8 = 64 pixels
+    int count_rec = ImageRegionFillingRecursive(img_rec, 10, 7, BLACK); // Região 8x8 = 64 pixels
     ImageSavePPM(img_rec, "test_region_fill_recursive.ppm");
     ASSERT_CHECK(count_rec == 64, "ImageRegionFillingRecursive_Count", &local_passed_count, &local_total_count);
     ImageDestroy(&img_rec);
@@ -332,7 +326,7 @@ static void TestImageRegionFillingAndSegmentation(int section_num) {
     // 5.2 - ImageRegionFillingWithSTACK
     printf("5.2: ImageRegionFillingWithSTACK\n");
     Image img_stack = ImageCopy(img_base);
-    int count_stack = ImageRegionFillingWithSTACK(img_stack, 10, 10, WHITE);
+    int count_stack = ImageRegionFillingWithSTACK(img_stack, 10, 7, BLACK);
     ImageSavePPM(img_stack, "test_region_fill_stack.ppm");
     ASSERT_CHECK(count_stack == 64, "ImageRegionFillingWithSTACK_Count", &local_passed_count, &local_total_count);
     ImageDestroy(&img_stack);
@@ -340,36 +334,36 @@ static void TestImageRegionFillingAndSegmentation(int section_num) {
     // 5.3 - ImageRegionFillingWithQUEUE
     printf("5.3: ImageRegionFillingWithQUEUE\n");
     Image img_queue = ImageCopy(img_base);
-    int count_queue = ImageRegionFillingWithQUEUE(img_queue, 10, 10, WHITE);
+    int count_queue = ImageRegionFillingWithQUEUE(img_queue, 10, 7, BLACK);
     ImageSavePPM(img_queue, "test_region_fill_queue.ppm");
     ASSERT_CHECK(count_queue == 64, "ImageRegionFillingWithQUEUE_Count", &local_passed_count, &local_total_count);
     ImageDestroy(&img_queue);
 
-    // 5.4 - ImageSegmentation (usando STACK)
-    printf("5.4: ImageSegmentation (with STACK filling)\n");
-    Image img_seg_stack = ImageCopy(img_base);
-    int regions_stack = ImageSegmentation(img_seg_stack, &ImageRegionFillingWithSTACK);
-    // 3x3 = 9 regiões, 4 brancas segmentadas.
-    int check5_4 = (regions_stack == 4);
-    ASSERT_CHECK(check5_4, "ImageSegmentation_Stack_RegionsCount", &local_passed_count, &local_total_count);
-    ImageDestroy(&img_seg_stack);
-    
-    // 5.5 - ImageSegmentation (usando QUEUE)
-    printf("5.5: ImageSegmentation (with QUEUE filling)\n");
-    Image img_seg_queue = ImageCopy(img_base);
-    int regions_queue = ImageSegmentation(img_seg_queue, &ImageRegionFillingWithQUEUE);
-    int check5_5 = (regions_queue == 4);
-    ASSERT_CHECK(check5_5, "ImageSegmentation_Queue_RegionsCount", &local_passed_count, &local_total_count);
-    ImageDestroy(&img_seg_queue);
-
-    // 5.6 - ImageSegmentation (usando RECURSIVE)
-    printf("5.6: ImageSegmentation (with RECURSIVE filling)\n");
+    // 5.4 - ImageSegmentation (usando RECURSIVE)
+    printf("5.4: ImageSegmentation (with RECURSIVE filling)\n");
     Image img_seg_rec = ImageCopy(img_base);
     int regions_rec = ImageSegmentation(img_seg_rec, &ImageRegionFillingRecursive);
-    int check5_6 = (regions_rec == 4);
-    ASSERT_CHECK(check5_6, "ImageSegmentation_Recursive_RegionsCount", &local_passed_count, &local_total_count);
+    // 3x3 = 9 regiões, 4 brancas segmentadas.
+    int check5_4 = (regions_rec == 4);
+    ASSERT_CHECK(check5_4, "ImageSegmentation_Recursive_RegionsCount", &local_passed_count, &local_total_count);
     ImageDestroy(&img_seg_rec);
     
+    // 5.5 - ImageSegmentation (usando STACK)
+    printf("5.5: ImageSegmentation (with STACK filling)\n");
+    Image img_seg_stack = ImageCopy(img_base);
+    int regions_stack = ImageSegmentation(img_seg_stack, &ImageRegionFillingWithSTACK);
+    int check5_5 = (regions_stack == 4);
+    ASSERT_CHECK(check5_5, "ImageSegmentation_Stack_RegionsCount", &local_passed_count, &local_total_count);
+    ImageDestroy(&img_seg_stack);
+    
+    // 5.6 - ImageSegmentation (usando QUEUE)
+    printf("5.6: ImageSegmentation (with QUEUE filling)\n");
+    Image img_seg_queue = ImageCopy(img_base);
+    int regions_queue = ImageSegmentation(img_seg_queue, &ImageRegionFillingWithQUEUE);
+    int check5_6 = (regions_queue == 4);
+    ASSERT_CHECK(check5_6, "ImageSegmentation_Queue_RegionsCount", &local_passed_count, &local_total_count);
+    ImageDestroy(&img_seg_queue);
+
     // Cleanup
     ImageDestroy(&img_base);
 
